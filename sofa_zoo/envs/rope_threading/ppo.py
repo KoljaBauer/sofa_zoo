@@ -1,13 +1,17 @@
 import numpy as np
 import wandb
+
+from cw2 import experiment, cw_error
+from cw2.cw_data import cw_logging
+from cw2 import cluster_work
+from cw2.cw_data.cw_wandb_logger import WandBLogger
+
 from stable_baselines3 import PPO
 
 from sofa_env.scenes.rope_threading.rope_threading_env import RenderMode, ObservationType, RopeThreadingEnv, ActionType
 from sofa_zoo.envs.rope_threading.rope_threading_no_gripper_aperture_wrapper import RopeThreadingNoGripperApertureWrapper
-
 from sofa_zoo.common.sb3_setup import configure_learning_pipeline
 from sofa_zoo.common.lapgym_experiment_parameters import CONFIG, PPO_KWARGS
-
 from sofa_zoo.envs.rope_threading.experiment_params import env_kwargs as env_kwargs_default
 
 
@@ -109,18 +113,31 @@ def build_model():
     return model, callback, config
 
 
+class PPOIterativeExperiment(experiment.AbstractIterativeExperiment):
+    def initialize(self, config: dict, rep: int, logger: cw_logging.LoggerArray) -> None:
+        wandb.init(sync_tensorboard=True)
+        self.model, self.callback, self.config = build_model()
+
+    def iterate(self, cw_config: dict, rep: int, n: int) -> dict:
+        # observations, bimanual, randomized, eyes
+        parameters = ["STATE", "False", "True", "1"]
+        self.model.learn(
+            total_timesteps=self.config["total_timesteps"],
+            callback=self.callback,
+            tb_log_name=f"{parameters[0]}_{parameters[1]}Biman_{parameters[2]}Random_{parameters[3]}",
+        )
+
+        return None
+
+    def save_state(self, cw_config: dict, rep: int, n: int) -> None:
+        pass
+
+    def finalize(self, surrender: cw_error.ExperimentSurrender = None, crash: bool = False):
+        log_path = str(self.model.logger.dir)
+        self.model.save(log_path + "saved_model.pth")
+
+
 if __name__ == "__main__":
-    wandb.init(sync_tensorboard=True)
-
-    model, callback, config = build_model()
-
-    # observations, bimanual, randomized, eyes
-    parameters = ["STATE", "False", "True", "1"]
-    model.learn(
-        total_timesteps=config["total_timesteps"],
-        callback=callback,
-        tb_log_name=f"{parameters[0]}_{parameters[1]}Biman_{parameters[2]}Random_{parameters[3]}",
-    )
-
-    log_path = str(model.logger.dir)
-    model.save(log_path + "saved_model.pth")
+    cw = cluster_work.ClusterWork(PPOIterativeExperiment)
+    # RUN
+    cw.run()
