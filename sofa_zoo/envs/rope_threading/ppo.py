@@ -1,78 +1,37 @@
 import numpy as np
+import wandb
 from stable_baselines3 import PPO
 
-from sofa_env.scenes.rope_threading.rope_threading_env import RenderMode, ObservationType, RopeThreadingEnv
+from sofa_env.scenes.rope_threading.rope_threading_env import RenderMode, ObservationType, RopeThreadingEnv, ActionType
+from sofa_zoo.envs.rope_threading.rope_threading_no_gripper_aperture_wrapper import RopeThreadingNoGripperApertureWrapper
 
 from sofa_zoo.common.sb3_setup import configure_learning_pipeline
 from sofa_zoo.common.lapgym_experiment_parameters import CONFIG, PPO_KWARGS
 
+from sofa_zoo.envs.rope_threading.experiment_params import env_kwargs as env_kwargs_default
 
-if __name__ == "__main__":
 
-    add_render_callback = True
+def build_model():
+    add_render_callback = False
     continuous_actions = True
     normalize_reward = True
     reward_clip = np.inf
 
     # observations, bimanual, randomized, eyes
-    parameters = ["STATE", "True", "True", "2"]
+    parameters = ["STATE", "False", "True", "1"]
+    bimanual_grasp = parameters[1] == "True"
+    randomized_eye = parameters[2] == "True"
 
     observation_type = ObservationType[parameters[0]]
     image_based = observation_type in [ObservationType.RGB, ObservationType.RGBD]
 
-    eye_configs = {
-        "1": [
-            (60, 10, 0, 90),
-        ],
-        "2": [
-            (60, 10, 0, 90),
-            (10, 10, 0, 90),
-        ],
-    }
 
-    bimanual_grasp = parameters[1] == "True"
-    randomized_eye = parameters[2] == "True"
-    image_based = observation_type in [ObservationType.RGB, ObservationType.RGBD]
 
-    env_kwargs = {
-        "image_shape": (64, 64),
-        "window_size": (600, 600),
-        "observation_type": observation_type,
-        "time_step": 0.01,
-        "frame_skip": 10,
-        "settle_steps": 20,
-        "render_mode": RenderMode.HEADLESS if image_based or add_render_callback else RenderMode.NONE,
-        "reward_amount_dict": {
-            "passed_eye": 10.0,
-            "lost_eye": -20.0,  # more than passed_eye
-            "goal_reached": 100.0,
-            "distance_to_active_eye": -0.0,
-            "lost_grasp": -0.1,
-            "collision": -0.1,
-            "floor_collision": -0.1,
-            "bimanual_grasp": 0.0,
-            "moved_towards_eye": 200.0,
-            "moved_away_from_eye": -200.0,
-            "workspace_violation": -0.01,
-            "state_limit_violation": -0.01,
-            "distance_to_lost_rope": -0.0,
-            "delta_distance_to_lost_rope": -0.0,
-            "fraction_rope_passed": 0.0,
-            "delta_fraction_rope_passed": 200.0,
-        },
-        "create_scene_kwargs": {
-            "eye_config": eye_configs[parameters[3]],
-            "randomize_gripper": True,
-            "start_grasped": True,
-            "randomize_grasp_index": True,
-        },
-        "on_reset_callbacks": None,
-        "color_eyes": True,
-        "individual_agents": False,
-        "only_right_gripper": not bimanual_grasp,
-        "fraction_of_rope_to_pass": 0.05,
-        "num_rope_tracking_points": 10,
-    }
+    env_kwargs = env_kwargs_default
+
+    env_kwargs['reward_amount_dict']['workspace_violation'] = -1.0
+    env_kwargs['control_gripper_aperture'] = False
+    env_kwargs['action_type'] = ActionType.VELOCITY
 
     if bimanual_grasp:
         env_kwargs["reward_amount_dict"]["bimanual_grasp"] = 100.0
@@ -81,17 +40,17 @@ if __name__ == "__main__":
 
     if randomized_eye:
         env_kwargs["create_scene_kwargs"]["eye_reset_noise"] = {
-            "low": np.array([-20.0, -20.0, 0.0, -15]),
-            "high": np.array([20.0, 20.0, 0.0, 15]),
+            "low": np.array([-15.0, -15.0, 0.0, -35.0]),
+            "high": np.array([15.0, 15.0, 0.0, 35.0]),
         }
 
-    config = {"max_episode_steps": 200 + 150 * (len(eye_configs[parameters[3]]) - 1), **CONFIG}
+    # config = {"max_episode_steps": 200 + 150 * (len(eye_configs[parameters[3]]) - 1), **CONFIG}
+    config = {"max_episode_steps": 100, **CONFIG}  # TODO: Is this correct?
 
     if image_based:
         ppo_kwargs = PPO_KWARGS["image_based"]
     else:
         ppo_kwargs = PPO_KWARGS["state_based"]
-
 
     info_keywords = [
         "distance_to_active_eye",
@@ -123,27 +82,44 @@ if __name__ == "__main__":
     config["ppo_config"] = ppo_kwargs
     config["env_kwargs"] = env_kwargs
     config["info_keywords"] = info_keywords
+    config["videos_per_run"] = 0
+    config["frame_stack"] = 1
+    config["total_timesteps"] = int(1e6)
+    config["checkpoint_distance"] = int(1e4)
 
     model, callback = configure_learning_pipeline(
         env_class=RopeThreadingEnv,
         env_kwargs=env_kwargs,
         pipeline_config=config,
         monitoring_keywords=info_keywords,
-        normalize_observations=False if image_based else True,
+        #normalize_observations=False if image_based else True,
+        normalize_observations=True,
         algo_class=PPO,
         algo_kwargs=ppo_kwargs,
         render=add_render_callback,
         normalize_reward=normalize_reward,
         reward_clip=reward_clip,
+        use_wandb=True,
         use_watchdog_vec_env=True,
         watchdog_vec_env_timeout=20.0,
         reset_process_on_env_reset=False,
+        model_checkpoint_distance=config["checkpoint_distance"]
     )
 
+    return model, callback, config
+
+
+if __name__ == "__main__":
+    wandb.init(sync_tensorboard=True)
+
+    model, callback, config = build_model()
+
+    # observations, bimanual, randomized, eyes
+    parameters = ["STATE", "False", "True", "1"]
     model.learn(
         total_timesteps=config["total_timesteps"],
         callback=callback,
-        tb_log_name= f"{parameters[0]}_{parameters[1]}Biman_{parameters[2]}Random_{parameters[3]}",
+        tb_log_name=f"{parameters[0]}_{parameters[1]}Biman_{parameters[2]}Random_{parameters[3]}",
     )
 
     log_path = str(model.logger.dir)

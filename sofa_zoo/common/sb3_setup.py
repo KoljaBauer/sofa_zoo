@@ -4,6 +4,8 @@ import gym
 import gym.spaces
 from gym.wrappers import TimeLimit, ResizeObservation
 
+from copy import deepcopy
+
 from typing import Callable, Type, Tuple, Optional, Union, List
 from pathlib import Path
 
@@ -13,8 +15,10 @@ from stable_baselines3.common.vec_env import SubprocVecEnv, VecNormalize, VecFra
 from stable_baselines3.common.callbacks import BaseCallback, CallbackList, CheckpointCallback
 
 from sofa_env.base import SofaEnv, RenderMode
+from sofa_env.wrappers.trajectory_recorder import TrajectoryRecorder
 from sofa_zoo.common.callbacks import RenderCallback, EpisodeInfoLoggerCallback, AdjustLoggingWindow
 from sofa_zoo.common.reset_process_vec_env import WatchdogVecEnv
+from sofa_zoo.envs.rope_threading.rope_threading_no_gripper_aperture_wrapper import RopeThreadingNoGripperApertureWrapper
 
 
 def configure_make_env(env_kwargs: dict, EnvClass: Type[SofaEnv], max_episode_steps: int) -> Callable:
@@ -22,27 +26,40 @@ def configure_make_env(env_kwargs: dict, EnvClass: Type[SofaEnv], max_episode_st
 
     def make_env() -> gym.Env:
 
+        env_kwargs_local = deepcopy(env_kwargs)
+
+        add_trajectoy_recorder_wrapper = env_kwargs_local.pop("add_trajectoy_recorder_wrapper", False)
         add_resize_observation_wrapper = False
-        window_size = env_kwargs.pop("window_size", None)
-        observation_shape = env_kwargs.pop("image_shape", None)
+        window_size = env_kwargs_local.pop("window_size", None)
+        observation_shape = env_kwargs_local.pop("image_shape", None)
+        trajectory_dir = env_kwargs_local.pop("trajectory_dir", "default_traj_dir")
+
+        after_step_callbacks = env_kwargs_local.pop("after_step_callbacks", [])
+        after_reset_callbacks = env_kwargs_local.pop("after_reset_callbacks", [])
+        save_compressed_keys = env_kwargs_local.pop("save_compressed_keys", [])
 
         user_specified_observation_shape = False if observation_shape is None else True
 
-        if env_kwargs.get("render_mode", None) == RenderMode.HUMAN:
+        control_gripper_aperture = env_kwargs_local.pop("control_gripper_aperture", True)
+
+        if env_kwargs_local.get("render_mode", None) == RenderMode.HUMAN:
 
             if not window_size == observation_shape:
                 assert window_size is not None
-                env_kwargs["image_shape"] = window_size
+                env_kwargs_local["image_shape"] = window_size
                 add_resize_observation_wrapper = True
             else:
                 # if there was an entry of image_shape, put it back in
                 if user_specified_observation_shape:
-                    env_kwargs["image_shape"] = observation_shape
+                    env_kwargs_local["image_shape"] = observation_shape
         else:
-            env_kwargs["image_shape"] = observation_shape
+            env_kwargs_local["image_shape"] = observation_shape
 
-        env = EnvClass(**env_kwargs)
+        env = EnvClass(**env_kwargs_local)
         env = TimeLimit(env, max_episode_steps=max_episode_steps)
+
+        if not control_gripper_aperture:
+            env = RopeThreadingNoGripperApertureWrapper(env)
 
         # TODO observation_type.name is used, because the enum is created in every env -> direct comparison not
         # possible. Is there a cleaner way?
@@ -50,6 +67,18 @@ def configure_make_env(env_kwargs: dict, EnvClass: Type[SofaEnv], max_episode_st
 
             assert observation_shape is not None
             env = ResizeObservation(env, observation_shape)
+
+        if add_trajectoy_recorder_wrapper:
+
+            env = TrajectoryRecorder(
+                env,
+                log_dir=trajectory_dir,
+                metadata=None,
+                store_info=True,
+                save_compressed_keys=save_compressed_keys,
+                after_step_callbacks=after_step_callbacks,
+                after_reset_callbacks=after_reset_callbacks,
+            )
 
         return env
 
@@ -99,7 +128,8 @@ def configure_learning_pipeline(
     else:
         env = DummyVecEnv([make_env])
 
-    env.seed(np.random.randint(0, 99999) if random_seed is None else random_seed)
+    # TODO: Is it okay to just comment this out?
+    # env.seed(np.random.randint(0, 99999) if random_seed is None else random_seed)
 
     env = VecMonitor(
         env,
