@@ -29,11 +29,9 @@ def build_model(params, n_envs=None, render_mode= None):
     observation_type = ObservationType[parameters[0]]
     image_based = observation_type in [ObservationType.RGB, ObservationType.RGBD]
 
-
-
     env_kwargs = env_kwargs_default
 
-    env_kwargs['reward_amount_dict']['workspace_violation'] = -1.0
+    env_kwargs['reward_amount_dict'] = params['reward_amount_dict']
     create_scene_kwargs = params.get('create_scene_kwargs', {})
     env_kwargs['control_gripper_aperture'] = create_scene_kwargs.get('control_gripper_aperture', False)
     env_kwargs['normalize_obs_static'] = params.get('normalize_obs_static', False)
@@ -43,16 +41,7 @@ def build_model(params, n_envs=None, render_mode= None):
     if render_mode is not None:
         env_kwargs['render_mode'] = render_mode
 
-    if bimanual_grasp:
-        env_kwargs["reward_amount_dict"]["bimanual_grasp"] = 100.0
-        env_kwargs["reward_amount_dict"]["distance_to_bimanual_grasp"] = -0.0
-        env_kwargs["reward_amount_dict"]["delta_distance_to_bimanual_grasp"] = -200.0
-
-    if randomized_eye:
-        env_kwargs["create_scene_kwargs"]["eye_reset_noise"] = {
-            "low": np.array([-15.0, -15.0, 0.0, -35.0]),
-            "high": np.array([15.0, 15.0, 0.0, 35.0]),
-        }
+    env_kwargs["create_scene_kwargs"]["eye_reset_noise"] = create_scene_kwargs.get('eye_reset_noise', None)
 
     # config = {"max_episode_steps": 200 + 150 * (len(eye_configs[parameters[3]]) - 1), **CONFIG}
     config = {"max_episode_steps": 100, **CONFIG}  # TODO: Is this correct?

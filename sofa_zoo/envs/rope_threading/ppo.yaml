@@ -40,3 +40,22 @@ params:
     "only_right_gripper": True,
     "control_gripper_aperture": True
   }
+
+  reward_amount_dict: {
+    "passed_eye": 10.0,
+    "lost_eye": -20.0,  # more than passed_eye
+    "goal_reached": 100.0,
+    "distance_to_active_eye": -0.0,
+    "lost_grasp": -0.1,
+    "collision": -0.1,
+    "floor_collision": -0.1,
+    "bimanual_grasp": 0.0,
+    "moved_towards_eye": 200.0,
+    "moved_away_from_eye": -200.0,
+    "workspace_violation": -1.0,
+    "state_limit_violation": -0.01,
+    "distance_to_lost_rope": -0.0,
+    "delta_distance_to_lost_rope": -0.0,
+    "fraction_rope_passed": 0.0,
+    "delta_fraction_rope_passed": 200.0,
+  }
