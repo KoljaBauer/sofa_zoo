@@ -19,6 +19,7 @@ from sofa_env.wrappers.trajectory_recorder import TrajectoryRecorder
 from sofa_zoo.common.callbacks import RenderCallback, EpisodeInfoLoggerCallback, AdjustLoggingWindow
 from sofa_zoo.common.reset_process_vec_env import WatchdogVecEnv
 from sofa_zoo.envs.rope_threading.rope_threading_no_gripper_aperture_wrapper import RopeThreadingNoGripperApertureWrapper
+from sofa_zoo.envs.rope_threading.rope_threading_normalize_obs_wrapper import RopeThreadingNormalizeObsWrapper
 
 
 def configure_make_env(env_kwargs: dict, EnvClass: Type[SofaEnv], max_episode_steps: int) -> Callable:
@@ -41,6 +42,7 @@ def configure_make_env(env_kwargs: dict, EnvClass: Type[SofaEnv], max_episode_st
         user_specified_observation_shape = False if observation_shape is None else True
 
         control_gripper_aperture = env_kwargs_local.pop("control_gripper_aperture", True)
+        normalize_obs_static = env_kwargs_local.pop("normalize_obs_static", False)
 
         if env_kwargs_local.get("render_mode", None) == RenderMode.HUMAN:
 
@@ -60,6 +62,9 @@ def configure_make_env(env_kwargs: dict, EnvClass: Type[SofaEnv], max_episode_st
 
         if not control_gripper_aperture:
             env = RopeThreadingNoGripperApertureWrapper(env)
+
+        if normalize_obs_static:
+            env = RopeThreadingNormalizeObsWrapper(env)
 
         # TODO observation_type.name is used, because the enum is created in every env -> direct comparison not
         # possible. Is there a cleaner way?

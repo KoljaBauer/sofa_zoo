@@ -15,7 +15,7 @@ from sofa_zoo.common.lapgym_experiment_parameters import CONFIG, PPO_KWARGS
 from sofa_zoo.envs.rope_threading.experiment_params import env_kwargs as env_kwargs_default
 
 
-def build_model():
+def build_model(params, n_envs=None, render_mode= None):
     add_render_callback = False
     continuous_actions = True
     normalize_reward = True
@@ -35,7 +35,12 @@ def build_model():
 
     env_kwargs['reward_amount_dict']['workspace_violation'] = -1.0
     env_kwargs['control_gripper_aperture'] = False
+    env_kwargs['normalize_obs_static'] = params.get('normalize_obs_static', False)
+    normalize_obs_dynamic = params.get('normalize_obs_dynamic', False)
+    env_kwargs['num_rope_tracking_points'] = params.get('num_rope_tracking_points', 0)
     env_kwargs['action_type'] = ActionType.VELOCITY
+    if render_mode is not None:
+        env_kwargs['render_mode'] = render_mode
 
     if bimanual_grasp:
         env_kwargs["reward_amount_dict"]["bimanual_grasp"] = 100.0
@@ -90,21 +95,22 @@ def build_model():
     config["frame_stack"] = 1
     config["total_timesteps"] = int(1e6)
     config["checkpoint_distance"] = int(1e4)
+    if n_envs is not None:
+        config['number_of_envs'] = n_envs
 
     model, callback = configure_learning_pipeline(
         env_class=RopeThreadingEnv,
         env_kwargs=env_kwargs,
         pipeline_config=config,
         monitoring_keywords=info_keywords,
-        #normalize_observations=False if image_based else True,
-        normalize_observations=True,
+        normalize_observations=normalize_obs_dynamic,
         algo_class=PPO,
         algo_kwargs=ppo_kwargs,
         render=add_render_callback,
         normalize_reward=normalize_reward,
         reward_clip=reward_clip,
         use_wandb=True,
-        use_watchdog_vec_env=True,
+        use_watchdog_vec_env=False, #TODO
         watchdog_vec_env_timeout=20.0,
         reset_process_on_env_reset=False,
         model_checkpoint_distance=config["checkpoint_distance"]
@@ -115,8 +121,9 @@ def build_model():
 
 class PPOIterativeExperiment(experiment.AbstractIterativeExperiment):
     def initialize(self, config: dict, rep: int, logger: cw_logging.LoggerArray) -> None:
-        wandb.init(sync_tensorboard=True)
-        self.model, self.callback, self.config = build_model()
+        wandb.init(name=config['params']['exp_name'], sync_tensorboard=True)
+        self.model, self.callback, self.config = build_model(config['params'])
+        self.save_path = config['params']['path'] + '/log/rep_' + str(rep)
 
     def iterate(self, cw_config: dict, rep: int, n: int) -> dict:
         # observations, bimanual, randomized, eyes
@@ -124,7 +131,7 @@ class PPOIterativeExperiment(experiment.AbstractIterativeExperiment):
         self.model.learn(
             total_timesteps=self.config["total_timesteps"],
             callback=self.callback,
-            tb_log_name=f"{parameters[0]}_{parameters[1]}Biman_{parameters[2]}Random_{parameters[3]}",
+            tb_log_name=self.save_path,
         )
 
         return None
