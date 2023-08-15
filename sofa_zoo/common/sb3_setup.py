@@ -183,7 +183,7 @@ def configure_learning_pipeline(
     model = algo_class(
         env=env,
         verbose=2,
-        tensorboard_log=log_dir + (str(wandb.run.id) if use_wandb else ""),
+        tensorboard_log=log_dir,
         **algo_kwargs,
     )
 
@@ -201,11 +201,11 @@ def configure_learning_pipeline(
         callback_list.append(
             WandbCallback(
                 gradient_save_freq=10000,
-                model_save_path=f"models/{wandb.run.id}",
+                model_save_path=log_dir,
                 verbose=2,
             )
         )
-        model_log_dir = os.path.join(wandb.run.dir, "logs")
+        model_log_dir=log_dir
     else:
         model_log_dir = log_dir
 

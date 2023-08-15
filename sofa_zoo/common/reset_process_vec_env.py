@@ -91,11 +91,11 @@ class WatchdogVecEnv(SubprocVecEnv):
         # must be consumed.
         # in addition, the observation and done state must be updated
         for i in hanging_envs:
-            reset_obs = self.remotes[i].recv()
-            _, reward, _, info = results[i]
-            results[i] = (reset_obs, reward, True, info)
+            reset_obs, _ = self.remotes[i].recv()
+            _, reward, _, info, _ = results[i]
+            results[i] = (reset_obs, reward, True, info, {})
 
-        obs, rews, dones, infos, _ = zip(*results) #TODO: Why is there an empty dict returned as the 5th component
+        obs, rews, dones, infos, _ = zip(*results)
         obs = list(obs)  # convert to list to allow modification
 
         if self.reset_process_on_env_reset:

@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import wandb
 
@@ -97,6 +98,7 @@ def build_model(params, n_envs=None, render_mode= None):
         algo_class=PPO,
         algo_kwargs=ppo_kwargs,
         render=add_render_callback,
+        log_dir=params['save_dir'],
         normalize_reward=normalize_reward,
         reward_clip=reward_clip,
         use_wandb=True,
@@ -112,8 +114,19 @@ def build_model(params, n_envs=None, render_mode= None):
 class PPOIterativeExperiment(experiment.AbstractIterativeExperiment):
     def initialize(self, config: dict, rep: int, logger: cw_logging.LoggerArray) -> None:
         wandb.init(name=config['params']['exp_name'], sync_tensorboard=True, config=config['params'])
-        self.model, self.callback, self.config = build_model(config['params'])
+        load_checkpoint = config['params'].get('load', False)
         self.save_path = config['params']['path'] + '/log/rep_' + str(rep)
+        config['params']['save_dir'] = self.save_path
+        ppo_model, self.callback, self.config = build_model(config['params'])
+
+
+        if load_checkpoint:
+            load_path = os.path.join(self.save_path, f"rl_model_{config['params']['load_iter']}_steps.zip")
+            print(f"Loading model from iteration {config['params']['load_iter']}")
+            self.model = PPO.load(load_path, env=ppo_model.env)
+        else:
+            self.model = ppo_model
+
 
     def iterate(self, cw_config: dict, rep: int, n: int) -> dict:
         # observations, bimanual, randomized, eyes
@@ -121,7 +134,6 @@ class PPOIterativeExperiment(experiment.AbstractIterativeExperiment):
         self.model.learn(
             total_timesteps=self.config["total_timesteps"],
             callback=self.callback,
-            tb_log_name=self.save_path,
         )
 
         return None

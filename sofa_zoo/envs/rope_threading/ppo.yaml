@@ -20,11 +20,14 @@ iterations: 1 # number of iterations
 
 # Experiment Parameters:
 params:
+  load: False # whether to load an existing model (same path as results)
+  load_iter: 10000 # only used when load == True
   exp_name: "ppo_static_n_points_0"
   path: "./log/sofa_zoo_ppo/ppo_static_n_points_0"
   normalize_obs_static: True
   normalize_obs_dynamic: False
   num_rope_tracking_points: 0
+  total_timesteps: 1e6
 
   # Environment params
   create_scene_kwargs: {
