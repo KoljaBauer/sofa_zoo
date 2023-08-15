@@ -34,7 +34,8 @@ def build_model(params, n_envs=None, render_mode= None):
     env_kwargs = env_kwargs_default
 
     env_kwargs['reward_amount_dict']['workspace_violation'] = -1.0
-    env_kwargs['control_gripper_aperture'] = False
+    create_scene_kwargs = params.get('create_scene_kwargs', {})
+    env_kwargs['control_gripper_aperture'] = create_scene_kwargs.get('control_gripper_aperture', False)
     env_kwargs['normalize_obs_static'] = params.get('normalize_obs_static', False)
     normalize_obs_dynamic = params.get('normalize_obs_dynamic', False)
     env_kwargs['num_rope_tracking_points'] = params.get('num_rope_tracking_points', 0)
@@ -121,7 +122,7 @@ def build_model(params, n_envs=None, render_mode= None):
 
 class PPOIterativeExperiment(experiment.AbstractIterativeExperiment):
     def initialize(self, config: dict, rep: int, logger: cw_logging.LoggerArray) -> None:
-        wandb.init(name=config['params']['exp_name'], sync_tensorboard=True)
+        wandb.init(name=config['params']['exp_name'], sync_tensorboard=True, config=config['params'])
         self.model, self.callback, self.config = build_model(config['params'])
         self.save_path = config['params']['path'] + '/log/rep_' + str(rep)
 

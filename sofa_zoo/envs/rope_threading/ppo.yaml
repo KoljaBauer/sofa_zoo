@@ -3,7 +3,7 @@
 name: "SLURM"   # MUST BE "SLURM"
 partition: "single"  # "single" for cpu, "gpu_4" or gpu_8" for gpu
 job-name: "ppo_rope_threading"# this will be the experiment's name in slurm
-num_parallel_jobs: 1 # max number of jobs executed in parallel
+num_parallel_jobs: 99 # max number of jobs executed in parallel
 ntasks: 1   #  leave that like it is
 cpus-per-task: 8   # there are 10 cores for each GPU
 time: 1000   # in minutes
@@ -25,3 +25,18 @@ params:
   normalize_obs_static: True
   normalize_obs_dynamic: False
   num_rope_tracking_points: 0
+
+  # Environment params
+  create_scene_kwargs: {
+    "eye_config": [ [ 60, 10, 0, 90 ] ],# [10, 10, 0, 90], [10, 60, 0, -45], [60, 60, 0, 90]]
+    "eye_reset_noise": {
+      "low": [ -15.0, -15.0, 0.0, -35.0 ],
+      "high": [ 15.0, 15.0, 0.0, 35.0 ]
+    },
+    "rope_stiffness": { # vary young modulus parameter of rope in this range
+      "min": !!python/float 5e4, # 8e3,
+      "max": !!python/float 5e4 # 1e5
+    },
+    "only_right_gripper": True,
+    "control_gripper_aperture": True
+  }
