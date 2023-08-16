@@ -1,0 +1,23 @@
+---
+# Slurm bwuni cpu
+name: "SLURM"   # MUST BE "SLURM"
+partition: "single"  # "single" for cpu, "gpu_4" or gpu_8" for gpu
+job-name: "ppo_debugging"# this will be the experiment's name in slurm
+num_parallel_jobs: 99 # max number of jobs executed in parallel
+ntasks: 1   #  leave that like it is
+cpus-per-task: 8   # there are 10 cores for each GPU
+time: 1000   # in minutes
+mem-per-cpu: 2000
+
+---
+# Experiment 1
+name: "ppo_debugging"
+
+# Required: Can also be set in DEFAULT
+path: "cw_log/"   # location to save results in
+repetitions: 1    # number of times one set of parameters is run
+iterations: 1 # number of iterations
+
+# Experiment Parameters:
+params:
+  key: "value"
