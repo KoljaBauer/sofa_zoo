@@ -16,6 +16,8 @@ from sofa_env.base import SofaEnv, RenderMode
 from sofa_zoo.common.callbacks import RenderCallback, EpisodeInfoLoggerCallback, AdjustLoggingWindow
 from sofa_zoo.common.reset_process_vec_env import WatchdogVecEnv
 
+from sofa_zoo.envs.rope_threading.rope_threading_no_gripper_aperture_wrapper import RopeThreadingNoGripperApertureWrapper
+
 
 def configure_make_env(env_kwargs: dict, EnvClass: Type[SofaEnv], max_episode_steps: int) -> Callable:
     """Returns a make_env function that is configured with given env_kwargs."""
@@ -27,6 +29,8 @@ def configure_make_env(env_kwargs: dict, EnvClass: Type[SofaEnv], max_episode_st
         observation_shape = env_kwargs.pop("image_shape", None)
 
         user_specified_observation_shape = False if observation_shape is None else True
+
+        control_gripper_aperture = env_kwargs.pop("control_gripper_aperture", True)
 
         if env_kwargs.get("render_mode", None) == RenderMode.HUMAN:
 
@@ -43,6 +47,9 @@ def configure_make_env(env_kwargs: dict, EnvClass: Type[SofaEnv], max_episode_st
 
         env = EnvClass(**env_kwargs)
         env = TimeLimit(env, max_episode_steps=max_episode_steps)
+
+        if not control_gripper_aperture:
+            env = RopeThreadingNoGripperApertureWrapper(env)
 
         # TODO observation_type.name is used, because the enum is created in every env -> direct comparison not
         # possible. Is there a cleaner way?

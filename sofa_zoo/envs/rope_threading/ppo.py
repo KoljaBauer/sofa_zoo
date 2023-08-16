@@ -83,6 +83,9 @@ class PPOIterativeExperiment(experiment.AbstractIterativeExperiment):
             "num_rope_tracking_points": 10,
         }
 
+        create_scene_kwargs = config['params'].get('create_scene_kwargs', {})
+        env_kwargs['control_gripper_aperture'] = create_scene_kwargs.get('control_gripper_aperture', False)
+
         if bimanual_grasp:
             env_kwargs["reward_amount_dict"]["bimanual_grasp"] = 100.0
             env_kwargs["reward_amount_dict"]["distance_to_bimanual_grasp"] = -0.0

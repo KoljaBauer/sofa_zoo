@@ -20,4 +20,4 @@ iterations: 1 # number of iterations
 
 # Experiment Parameters:
 params:
-  key: "value"
+  create_scene_kwargs: {'control_gripper_aperture': False}
