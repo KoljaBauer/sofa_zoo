@@ -13,6 +13,8 @@ from cw2.cw_data import cw_logging
 from cw2 import cluster_work
 from cw2.cw_data.cw_wandb_logger import WandBLogger
 
+from sofa_env.scenes.rope_threading.rope_threading_env import ActionType
+
 
 class PPOIterativeExperiment(experiment.AbstractIterativeExperiment):
     def initialize(self, config: dict, rep: int, logger: cw_logging.LoggerArray) -> None:
@@ -45,12 +47,13 @@ class PPOIterativeExperiment(experiment.AbstractIterativeExperiment):
 
         env_kwargs = {
             "image_shape": (64, 64),
-            "window_size": (600, 600),
+            "window_size": (200, 200),
             "observation_type": observation_type,
             "time_step": 0.01,
             "frame_skip": 10,
             "settle_steps": 20,
-            "render_mode": RenderMode.HEADLESS if image_based or add_render_callback else RenderMode.NONE,
+            #"render_mode": RenderMode.HEADLESS if image_based or add_render_callback else RenderMode.NONE,
+            "render_mode": RenderMode.HUMAN,
             "reward_amount_dict": {
                 "passed_eye": 10.0,
                 "lost_eye": -20.0,  # more than passed_eye
@@ -139,6 +142,7 @@ class PPOIterativeExperiment(experiment.AbstractIterativeExperiment):
         self.config["videos_per_run"] = 0
         self.config["frame_stack"] = 1
         self.config['total_timesteps'] = 5e5
+        env_kwargs['action_type'] = ActionType.VELOCITY
 
         self.model, self.callback = configure_learning_pipeline(
             env_class=RopeThreadingEnv,
