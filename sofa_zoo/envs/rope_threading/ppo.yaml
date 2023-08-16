@@ -20,4 +20,6 @@ iterations: 1 # number of iterations
 
 # Experiment Parameters:
 params:
+  exp_name: "local_debug_ppo"
   create_scene_kwargs: {'control_gripper_aperture': False}
+  action_type: "continuous" # either 'velocity' or 'continuous'

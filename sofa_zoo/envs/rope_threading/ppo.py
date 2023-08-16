@@ -18,7 +18,7 @@ from sofa_env.scenes.rope_threading.rope_threading_env import ActionType
 
 class PPOIterativeExperiment(experiment.AbstractIterativeExperiment):
     def initialize(self, config: dict, rep: int, logger: cw_logging.LoggerArray) -> None:
-        wandb.init(sync_tensorboard=True)
+        wandb.init(name=config['params']['exp_name'], sync_tensorboard=True, config=config['params'])
 
         add_render_callback = True
         continuous_actions = True
@@ -142,7 +142,11 @@ class PPOIterativeExperiment(experiment.AbstractIterativeExperiment):
         self.config["videos_per_run"] = 0
         self.config["frame_stack"] = 1
         self.config['total_timesteps'] = 5e5
-        env_kwargs['action_type'] = ActionType.VELOCITY
+        action_type = config['params'].get('action_type', "velocity")
+        if action_type == "velocity":
+            env_kwargs['action_type'] = ActionType.VELOCITY
+        else:
+            env_kwargs['action_type'] = ActionType.CONTINUOUS
 
         self.model, self.callback = configure_learning_pipeline(
             env_class=RopeThreadingEnv,
