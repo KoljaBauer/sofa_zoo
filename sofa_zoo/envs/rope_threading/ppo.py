@@ -6,8 +6,10 @@ from sofa_env.scenes.rope_threading.rope_threading_env import RenderMode, Observ
 from sofa_zoo.common.sb3_setup import configure_learning_pipeline
 from sofa_zoo.common.lapgym_experiment_parameters import CONFIG, PPO_KWARGS
 
+import wandb
 
 if __name__ == "__main__":
+    wandb.init(sync_tensorboard=True)
 
     add_render_callback = True
     continuous_actions = True
@@ -15,7 +17,7 @@ if __name__ == "__main__":
     reward_clip = np.inf
 
     # observations, bimanual, randomized, eyes
-    parameters = ["STATE", "True", "True", "2"]
+    parameters = ["STATE", "False", "True", "1"]
 
     observation_type = ObservationType[parameters[0]]
     image_based = observation_type in [ObservationType.RGB, ObservationType.RGBD]
@@ -62,9 +64,9 @@ if __name__ == "__main__":
         },
         "create_scene_kwargs": {
             "eye_config": eye_configs[parameters[3]],
-            "randomize_gripper": True,
+            "randomize_gripper": False,
             "start_grasped": True,
-            "randomize_grasp_index": True,
+            "randomize_grasp_index": False,
         },
         "on_reset_callbacks": None,
         "color_eyes": True,
@@ -85,7 +87,8 @@ if __name__ == "__main__":
             "high": np.array([20.0, 20.0, 0.0, 15]),
         }
 
-    config = {"max_episode_steps": 200 + 150 * (len(eye_configs[parameters[3]]) - 1), **CONFIG}
+    #config = {"max_episode_steps": 200 + 150 * (len(eye_configs[parameters[3]]) - 1), **CONFIG}
+    config = {"max_episode_steps": 100, **CONFIG}
 
     if image_based:
         ppo_kwargs = PPO_KWARGS["image_based"]
@@ -124,6 +127,10 @@ if __name__ == "__main__":
     config["env_kwargs"] = env_kwargs
     config["info_keywords"] = info_keywords
 
+    config["videos_per_run"] = 0
+    config["frame_stack"] = 1
+    config['total_timesteps'] = 5e5
+
     model, callback = configure_learning_pipeline(
         env_class=RopeThreadingEnv,
         env_kwargs=env_kwargs,
@@ -135,6 +142,7 @@ if __name__ == "__main__":
         render=add_render_callback,
         normalize_reward=normalize_reward,
         reward_clip=reward_clip,
+        use_wandb=True,
         use_watchdog_vec_env=True,
         watchdog_vec_env_timeout=20.0,
         reset_process_on_env_reset=False,

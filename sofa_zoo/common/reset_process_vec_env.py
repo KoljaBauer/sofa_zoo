@@ -95,7 +95,7 @@ class WatchdogVecEnv(SubprocVecEnv):
             _, reward, _, info = results[i]
             results[i] = (reset_obs, reward, True, info)
 
-        obs, rews, dones, infos = zip(*results)
+        obs, rews, dones, infos, _ = zip(*results)
         obs = list(obs)  # convert to list to allow modification
 
         if self.reset_process_on_env_reset:
