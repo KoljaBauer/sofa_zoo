@@ -14,7 +14,7 @@ class RopeThreadingNoGripperApertureWrapper(gym.Wrapper):
         return reduced_action_space
 
     def step(self, action):
-        if self.action_type == ActionType.VELOCITY:
+        if self.action_type == ActionType.VELOCITY or self.action_type == ActionType.CONTINUOUS:
             pad_action = 0
         else: # position control
             pad_action = -1
