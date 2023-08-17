@@ -22,4 +22,8 @@ iterations: 1 # number of iterations
 params:
   exp_name: "local_debug_ppo"
   create_scene_kwargs: {'control_gripper_aperture': False}
-  action_type: "continuous" # either 'velocity' or 'continuous'
+  action_type: "velocity" # either 'velocity' or 'continuous'
+
+  normalize_obs_static: True
+  normalize_obs_dynamic: False
+  total_timesteps: 1e6

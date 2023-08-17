@@ -52,8 +52,8 @@ class PPOIterativeExperiment(experiment.AbstractIterativeExperiment):
             "time_step": 0.01,
             "frame_skip": 10,
             "settle_steps": 20,
-            #"render_mode": RenderMode.HEADLESS if image_based or add_render_callback else RenderMode.NONE,
-            "render_mode": RenderMode.HUMAN,
+            "render_mode": RenderMode.HEADLESS if image_based or add_render_callback else RenderMode.NONE,
+            #"render_mode": RenderMode.HUMAN,
             "reward_amount_dict": {
                 "passed_eye": 10.0,
                 "lost_eye": -20.0,  # more than passed_eye
@@ -88,6 +88,8 @@ class PPOIterativeExperiment(experiment.AbstractIterativeExperiment):
 
         create_scene_kwargs = config['params'].get('create_scene_kwargs', {})
         env_kwargs['control_gripper_aperture'] = create_scene_kwargs.get('control_gripper_aperture', False)
+        env_kwargs['normalize_obs_static'] = config['params'].get('normalize_obs_static', False)
+        normalize_obs_dynamic = config['params'].get('normalize_obs_dynamic', False)
 
         if bimanual_grasp:
             env_kwargs["reward_amount_dict"]["bimanual_grasp"] = 100.0
@@ -153,7 +155,7 @@ class PPOIterativeExperiment(experiment.AbstractIterativeExperiment):
             env_kwargs=env_kwargs,
             pipeline_config=self.config,
             monitoring_keywords=info_keywords,
-            normalize_observations=False if image_based else True,
+            normalize_observations=normalize_obs_dynamic,
             algo_class=PPO,
             algo_kwargs=ppo_kwargs,
             render=add_render_callback,
