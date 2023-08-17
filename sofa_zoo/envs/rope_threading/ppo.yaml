@@ -24,6 +24,8 @@ params:
   create_scene_kwargs: {'control_gripper_aperture': False}
   action_type: "velocity" # either 'velocity' or 'continuous'
 
-  normalize_obs_static: True
-  normalize_obs_dynamic: False
-  total_timesteps: 1e6
+  normalize_obs_static: False
+  normalize_obs_dynamic: True
+  total_timesteps: 1e6 # TODO: in script verwerten
+
+  seed: 123

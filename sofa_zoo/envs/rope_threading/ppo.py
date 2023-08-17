@@ -1,4 +1,5 @@
 import numpy as np
+import torch as ch
 from stable_baselines3 import PPO
 
 from sofa_env.scenes.rope_threading.rope_threading_env import RenderMode, ObservationType, RopeThreadingEnv
@@ -150,6 +151,10 @@ class PPOIterativeExperiment(experiment.AbstractIterativeExperiment):
         else:
             env_kwargs['action_type'] = ActionType.CONTINUOUS
 
+        seed = config['params'].get('seed', 0) + rep
+        ch.manual_seed(seed)
+
+
         self.model, self.callback = configure_learning_pipeline(
             env_class=RopeThreadingEnv,
             env_kwargs=env_kwargs,
@@ -160,6 +165,7 @@ class PPOIterativeExperiment(experiment.AbstractIterativeExperiment):
             algo_kwargs=ppo_kwargs,
             render=add_render_callback,
             normalize_reward=normalize_reward,
+            random_seed=seed,
             reward_clip=reward_clip,
             use_wandb=True,
             use_watchdog_vec_env=True,

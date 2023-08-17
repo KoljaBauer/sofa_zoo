@@ -20,11 +20,13 @@ from sofa_zoo.envs.rope_threading.rope_threading_no_gripper_aperture_wrapper imp
 from sofa_zoo.envs.rope_threading.rope_threading_denorm_action_wrapper import RopeThreadingDenormActionWrapper
 from sofa_zoo.envs.rope_threading.rope_threading_normalize_obs_wrapper import RopeThreadingNormalizeObsWrapper
 
+from functools import partial
+
 
 def configure_make_env(env_kwargs: dict, EnvClass: Type[SofaEnv], max_episode_steps: int) -> Callable:
     """Returns a make_env function that is configured with given env_kwargs."""
 
-    def make_env() -> gym.Env:
+    def make_env(random_seed: int = None) -> gym.Env:
 
         add_resize_observation_wrapper = False
         window_size = env_kwargs.pop("window_size", None)
@@ -49,6 +51,13 @@ def configure_make_env(env_kwargs: dict, EnvClass: Type[SofaEnv], max_episode_st
             env_kwargs["image_shape"] = observation_shape
 
         env = EnvClass(**env_kwargs)
+
+        if random_seed is None:
+            random_seed = np.random.randint(0, 99999)
+        env.seed(random_seed)
+        print(f"seeded env with seed {random_seed}")
+
+
         env = TimeLimit(env, max_episode_steps=max_episode_steps)
 
         env = RopeThreadingDenormActionWrapper(env)
@@ -68,7 +77,7 @@ def configure_make_env(env_kwargs: dict, EnvClass: Type[SofaEnv], max_episode_st
 
         return env
 
-    return make_env
+    return (lambda random_seed: make_env(random_seed))
 
 
 def configure_learning_pipeline(
@@ -102,17 +111,30 @@ def configure_learning_pipeline(
         max_episode_steps=pipeline_config["max_episode_steps"],
     )
 
+    if random_seed is None:
+        random_seed = np.random.randint(0, 99999)
+    func_list = [partial(make_env, random_seed=(random_seed + i)) for i in range(pipeline_config["number_of_envs"])]
+
+
     if not dummy_run:
         if use_watchdog_vec_env:
+            '''
             env = WatchdogVecEnv(
                 [make_env] * pipeline_config["number_of_envs"],
                 step_timeout_sec=watchdog_vec_env_timeout,
                 reset_process_on_env_reset=reset_process_on_env_reset,
             )
+            '''
+            env = WatchdogVecEnv(
+                func_list,
+                step_timeout_sec=watchdog_vec_env_timeout,
+                reset_process_on_env_reset=reset_process_on_env_reset,
+            )
         else:
-            env = SubprocVecEnv([make_env] * pipeline_config["number_of_envs"])
+            #env = SubprocVecEnv([make_env] * pipeline_config["number_of_envs"])
+            env = SubprocVecEnv(func_list)
     else:
-        env = DummyVecEnv([make_env])
+        env = DummyVecEnv(func_list)
 
     #env.seed(np.random.randint(0, 99999) if random_seed is None else random_seed) TODO!!
 
@@ -159,7 +181,7 @@ def configure_learning_pipeline(
         venv=env,
         n_stack=pipeline_config["frame_stack"],
     )
-
+    algo_kwargs['seed'] = random_seed
     model = algo_class(
         env=env,
         verbose=2,
