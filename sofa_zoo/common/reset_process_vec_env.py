@@ -93,7 +93,7 @@ class WatchdogVecEnv(SubprocVecEnv):
         # only an observation. missing reward, done, and info must be added
         for i in hanging_envs:
             # hanging envs return from reset call, therefore return is (obs, reset_info_dict)
-            results[i] = (results[i][0], 0.0, True, defaultdict(float), results[i][1])
+            results[i] = (results[i][0], 0.0, True, {'successful_task': [False]}, results[i][1])
 
         obs, rews, dones, infos, _ = zip(*results)
         obs = list(obs)  # convert to list to allow modification
