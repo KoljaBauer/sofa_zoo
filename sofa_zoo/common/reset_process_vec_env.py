@@ -1,26 +1,26 @@
-from datetime import datetime
-import multiprocessing as mp
 import selectors
 import time
-from typing import Callable, List, Optional, Union
-
 import gym
 import numpy as np
+import multiprocessing as mp
+
+from typing import Callable, List, Optional, Union
+from collections import defaultdict
 
 from stable_baselines3.common.vec_env.base_vec_env import CloudpickleWrapper, VecEnv, VecEnvObs, VecEnvStepReturn
 from stable_baselines3.common.vec_env.subproc_vec_env import SubprocVecEnv, _flatten_obs, _worker
 
 
 class WatchdogVecEnv(SubprocVecEnv):
-    """Variant of Stable Baseline 3's SubprocVecEnv that closes and restarts environment processes that hang during a step.
-
-    This VecEnv features a watchdog in its asynchronous step function to reset environments that take longer than
-    ``step_timeout_sec`` for one step. This might happen when unstable deformations cause SOFA to hang.
+    """Variant of Stable Baseline 3's SubprocVecEnv that closes and restarts the environment processes on every reset.
 
     Resetting a SOFA scene that features topological changes such as removing/cutting tetrahedral elements does not
     restore the initial number of elements in the meshes. Manually removing and adding elements to SOFA's simulation
     tree technically works, but is sometimes quite unreliable and prone to memory leaks. This VecEnv avoids this
-    problem by creating a completely new environment with simulation, if a reset signal is sent to the environment.
+    problem by creating a completely new environment with simulation, if a reset signal is set to the environment.
+
+    This VecEnv also features a watchdog in its asynchronous step function to reset environments that take longer than
+    ``step_timeout_sec`` for one step. This might happen when unstable deformations cause SOFA to hang.
 
     Notes:
         If an environment is reset by the step watchdog, the returned values for this environment will be:
@@ -75,25 +75,25 @@ class WatchdogVecEnv(SubprocVecEnv):
             # wait for all remotes to finish
             successes = wait_all(self.remotes, timeout=self.step_timeout)
             if len(successes) != len(self.remotes):
+                # terminate and re-fork any environment that are hanging
                 hanging_envs = [i for i, remote in enumerate(self.remotes) if remote not in successes]
                 for i in hanging_envs:
-                    print(
-                        f"Environment {i} is hanging and will be restarted "
-                        f"({datetime.now().strftime('%H:%M:%S')})"
-                    )
-                    # send reset command, which will be processed immediately after step
-                    self.remotes[i].send(("reset", None))
+                    print(f"Environment {i} is hanging and will be terminated.")
+                    self.processes[i].terminate()  # terminate worker
+                    # clear any data in the pipe
+                    while self.remotes[i].poll():
+                        self.remotes[i].recv()
+                    # start new worker, seed, and reset it
+                    self._restart_process(i)
 
-        results = [remote.recv() for remote in self.remotes]
+        results = [remote.recv() for remote in self.remotes] # unpack correctly without reset info dict
         self.waiting = False
 
-        # any environments that were just reset will send an extra message that
-        # must be consumed.
-        # in addition, the observation and done state must be updated
+        # any environments that were just terminated and reset will return
+        # only an observation. missing reward, done, and info must be added
         for i in hanging_envs:
-            reset_obs, _ = self.remotes[i].recv()
-            _, reward, _, info, _ = results[i]
-            results[i] = (reset_obs, reward, True, info, {})
+            # hanging envs return from reset call, therefore return is (obs, reset_info_dict)
+            results[i] = (results[i][0], 0.0, True, defaultdict(float), results[i][1])
 
         obs, rews, dones, infos, _ = zip(*results)
         obs = list(obs)  # convert to list to allow modification
@@ -105,7 +105,7 @@ class WatchdogVecEnv(SubprocVecEnv):
                     process.join()  # wait for worker to stop
                     # start new worker, seed, and reset it
                     self._restart_process(i)
-                    obs[i] = remote.recv()  # collect reset observation
+                    obs[i], _ = remote.recv()  # collect reset observation
 
         return _flatten_obs(obs, self.observation_space), np.stack(rews), np.stack(dones), infos
 
@@ -146,7 +146,7 @@ class WatchdogVecEnv(SubprocVecEnv):
             # start new workers, seed, and reset them
             for i in range(len(self.processes)):
                 self._restart_process(i)
-            obs = [remote.recv() for remote in self.remotes]
+            obs = [remote.recv()[0] for remote in self.remotes] # take only obs, not reset info dict
             return _flatten_obs(obs, self.observation_space)
         else:
             return super().reset()
