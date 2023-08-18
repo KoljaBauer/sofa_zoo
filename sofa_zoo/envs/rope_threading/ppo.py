@@ -12,9 +12,9 @@ import wandb
 from cw2 import experiment, cw_error
 from cw2.cw_data import cw_logging
 from cw2 import cluster_work
-from cw2.cw_data.cw_wandb_logger import WandBLogger
 
 from sofa_env.scenes.rope_threading.rope_threading_env import ActionType
+from sofa_zoo.common.schedules import linear_schedule
 
 
 class PPOIterativeExperiment(experiment.AbstractIterativeExperiment):
@@ -144,7 +144,6 @@ class PPOIterativeExperiment(experiment.AbstractIterativeExperiment):
 
         self.config["videos_per_run"] = 0
         self.config["frame_stack"] = 1
-        self.config['total_timesteps'] = 5e5
         action_type = config['params'].get('action_type', "velocity")
         if action_type == "velocity":
             env_kwargs['action_type'] = ActionType.VELOCITY
@@ -153,6 +152,14 @@ class PPOIterativeExperiment(experiment.AbstractIterativeExperiment):
 
         seed = config['params'].get('seed', 0) + rep
         ch.manual_seed(seed)
+
+        learning_rate = config['params'].get('learning_rate', None)
+        if learning_rate is not None:
+            ppo_kwargs['learning_rate'] = linear_schedule(learning_rate)
+
+        total_timesteps = config['params'].get('total_timesteps', None)
+        if total_timesteps is not None:
+            self.config['total_timesteps'] = total_timesteps
 
 
         self.model, self.callback = configure_learning_pipeline(

@@ -15,7 +15,7 @@ name: "ppo_debugging"
 
 # Required: Can also be set in DEFAULT
 path: "cw_log/"   # location to save results in
-repetitions: 1    # number of times one set of parameters is run
+repetitions: 5    # number of times one set of parameters is run
 iterations: 1 # number of iterations
 
 # Experiment Parameters:
@@ -26,6 +26,7 @@ params:
 
   normalize_obs_static: False
   normalize_obs_dynamic: True
-  total_timesteps: 1e6 # TODO: in script verwerten
+  total_timesteps: 1.0e+06
 
-  seed: 123
+  seed: 1
+  learning_rate: 2.5e-5 # initial value, then linear decrease. Default is 2.5e-4
