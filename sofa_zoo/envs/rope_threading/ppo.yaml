@@ -21,7 +21,6 @@ iterations: 1 # number of iterations
 # Experiment Parameters:
 params:
   exp_name: "local_debug_ppo"
-  create_scene_kwargs: {'control_gripper_aperture': False}
   action_type: "velocity" # either 'velocity' or 'continuous'
 
   normalize_obs_static: False
@@ -30,3 +29,44 @@ params:
 
   seed: 1
   learning_rate: 2.5e-5 # initial value, then linear decrease. Default is 2.5e-4
+
+  # Environment params
+  create_scene_kwargs: {
+    "eye_config": [ [ 60, 10, 0, 90 ] ],# [10, 10, 0, 90], [10, 60, 0, -45], [60, 60, 0, 90]]
+    "eye_reset_noise": {
+      "low": [ -15.0, -15.0, 0.0, -35.0 ],
+      "high": [ 15.0, 15.0, 0.0, 35.0 ]
+    },
+
+    "rope_stiffness": { # vary young modulus parameter of rope in this range
+      "min": !!python/float 5e4, #8e3,
+      "max": !!python/float 5e4 # 1e5
+    },
+    'control_gripper_aperture': False,
+    "randomize_gripper": False,
+    "start_grasped": True,
+    "randomize_grasp_index": False,
+  }
+
+  reward_amount_dict: {
+    "passed_eye": 10.0,
+    "lost_eye": -20.0,  # more than passed_eye
+    "goal_reached": 100.0,
+    "distance_to_active_eye": -0.0,
+    "lost_grasp": -0.1,
+    "collision": -0.1,
+    "floor_collision": -0.1,
+    "bimanual_grasp": 0.0,
+    "moved_towards_eye": 200.0,
+    "moved_away_from_eye": -200.0,
+    "workspace_violation": -1.0,
+    "state_limit_violation": -0.01,
+    "distance_to_lost_rope": -0.0,
+    "delta_distance_to_lost_rope": -0.0,
+    "fraction_rope_passed": 0.0,
+    "delta_fraction_rope_passed": 200.0,
+  }
+
+  num_rope_tracking_points: 0
+
+  changing_context: False # TODO: Make this do something
