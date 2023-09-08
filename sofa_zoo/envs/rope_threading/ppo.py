@@ -57,6 +57,8 @@ class PPOIterativeExperiment(experiment.AbstractIterativeExperiment):
         normalize_obs_dynamic = config['params'].get('normalize_obs_dynamic', False)
 
         self.config = {"max_episode_steps": 100, **CONFIG}
+        if config['params'].get('number_of_envs', False):
+            self.config['number_of_envs'] = config['params']['number_of_envs']
 
         ppo_kwargs = PPO_KWARGS["state_based"]
 

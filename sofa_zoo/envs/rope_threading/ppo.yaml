@@ -26,6 +26,7 @@ params:
   normalize_obs_static: False
   normalize_obs_dynamic: True
   total_timesteps: 1.0e+06
+  number_of_envs: 16
 
   seed: 1
   learning_rate: 2.5e-5 # initial value, then linear decrease. Default is 2.5e-4
