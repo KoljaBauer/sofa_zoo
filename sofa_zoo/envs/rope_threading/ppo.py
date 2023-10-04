@@ -112,6 +112,11 @@ class PPOIterativeExperiment(experiment.AbstractIterativeExperiment):
         if total_timesteps is not None:
             self.config['total_timesteps'] = total_timesteps
 
+        move_board_during_execution = config['params'].get('move_board_during_execution')
+
+        if move_board_during_execution:
+            env_kwargs['move_board_during_execution'] = True
+
 
         self.model, self.callback = configure_learning_pipeline(
             env_class=RopeThreadingEnv,

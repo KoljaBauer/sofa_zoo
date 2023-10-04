@@ -19,6 +19,7 @@ from sofa_zoo.common.reset_process_vec_env import WatchdogVecEnv
 from sofa_zoo.envs.rope_threading.rope_threading_no_gripper_aperture_wrapper import RopeThreadingNoGripperApertureWrapper
 from sofa_zoo.envs.rope_threading.rope_threading_denorm_action_wrapper import RopeThreadingDenormActionWrapper
 from sofa_zoo.envs.rope_threading.rope_threading_normalize_obs_wrapper import RopeThreadingNormalizeObsWrapper
+from sofa_zoo.envs.rope_threading.move_board_wrapper import MoveBoardWrapper
 
 from functools import partial
 
@@ -50,7 +51,14 @@ def configure_make_env(env_kwargs: dict, EnvClass: Type[SofaEnv], max_episode_st
         else:
             env_kwargs["image_shape"] = observation_shape
 
+
+        move_board_during_execution = env_kwargs.pop('move_board_during_execution', False)
+        context_change_noise = env_kwargs['create_scene_kwargs'].pop('context_change_noise')
         env = EnvClass(**env_kwargs)
+        if move_board_during_execution:
+            env = MoveBoardWrapper(env)
+            if context_change_noise:
+                env.set_context_change_noise(context_change_noise=context_change_noise)
 
         if random_seed is None:
             random_seed = np.random.randint(0, 99999)

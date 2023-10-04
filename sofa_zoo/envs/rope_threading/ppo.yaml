@@ -16,17 +16,19 @@ name: "ppo_debugging"
 # Required: Can also be set in DEFAULT
 path: "cw_log/"   # location to save results in
 repetitions: 5    # number of times one set of parameters is run
-iterations: 1 # number of iterations
+iterations: 3 # number of iterations
 
 # Experiment Parameters:
 params:
   exp_name: "local_debug_ppo"
   action_type: "velocity" # either 'velocity' or 'continuous'
 
+  move_board_during_execution: False
+
   normalize_obs_static: False
   normalize_obs_dynamic: True
-  total_timesteps: 1.0e+06
-  number_of_envs: 16
+  total_timesteps: 1.0e+07
+  number_of_envs: 8
 
   seed: 1
   learning_rate: 2.5e-5 # initial value, then linear decrease. Default is 2.5e-4
@@ -47,6 +49,10 @@ params:
     "randomize_gripper": False,
     "start_grasped": True,
     "randomize_grasp_index": False,
+    "context_change_noise": {
+      "low": [ -15.0, -15.0, 0.0, -10.0 ],
+      "high": [ 15.0, 15.0, 0.0, 10.0 ]
+    }
   }
 
   reward_amount_dict: {
@@ -69,5 +75,3 @@ params:
   }
 
   num_rope_tracking_points: 0
-
-  changing_context: False # TODO: Make this do something
