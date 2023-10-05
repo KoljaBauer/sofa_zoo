@@ -26,15 +26,22 @@ class PPOIterativeExperiment(experiment.AbstractIterativeExperiment):
         normalize_reward = True
         reward_clip = np.inf
 
+        image_based = config['params'].get('image_based', False)
+        if image_based:
+            observation_type = ObservationType["RGB"]
+            ppo_kwargs = PPO_KWARGS["image_based"]
+        else:
+            observation_type = ObservationType["STATE"]
+            ppo_kwargs = PPO_KWARGS["state_based"]
 
         env_kwargs = {
             "image_shape": (64, 64),
             "window_size": (200, 200),
-            "observation_type": ObservationType["STATE"],
+            "observation_type": observation_type,
             "time_step": 0.01,
             "frame_skip": 10,
             "settle_steps": 20,
-            "render_mode": RenderMode.NONE,
+            "render_mode": RenderMode.HEADLESS if image_based else RenderMode.NONE,
             #"render_mode": RenderMode.HUMAN,
             "on_reset_callbacks": None,
             "color_eyes": True,
@@ -52,15 +59,12 @@ class PPOIterativeExperiment(experiment.AbstractIterativeExperiment):
         num_rope_tracking_points = config['params'].get('num_rope_tracking_points', 0)
         env_kwargs['num_rope_tracking_points'] = num_rope_tracking_points
 
-
         env_kwargs['normalize_obs_static'] = config['params'].get('normalize_obs_static', False)
         normalize_obs_dynamic = config['params'].get('normalize_obs_dynamic', False)
 
         self.config = {"max_episode_steps": 100, **CONFIG}
         if config['params'].get('number_of_envs', False):
             self.config['number_of_envs'] = config['params']['number_of_envs']
-
-        ppo_kwargs = PPO_KWARGS["state_based"]
 
         info_keywords = [
             "distance_to_active_eye",
@@ -117,13 +121,15 @@ class PPOIterativeExperiment(experiment.AbstractIterativeExperiment):
         if move_board_during_execution:
             env_kwargs['move_board_during_execution'] = True
 
+        device = config['params'].get('device', 'cpu') # either 'cpu' or 'cuda'
+        ppo_kwargs['device'] = device
 
         self.model, self.callback = configure_learning_pipeline(
             env_class=RopeThreadingEnv,
             env_kwargs=env_kwargs,
             pipeline_config=self.config,
             monitoring_keywords=info_keywords,
-            normalize_observations=normalize_obs_dynamic,
+            normalize_observations=False if image_based else normalize_obs_dynamic,
             algo_class=PPO,
             algo_kwargs=ppo_kwargs,
             render=add_render_callback,

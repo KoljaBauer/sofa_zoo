@@ -16,12 +16,14 @@ name: "ppo_debugging"
 # Required: Can also be set in DEFAULT
 path: "cw_log/"   # location to save results in
 repetitions: 5    # number of times one set of parameters is run
-iterations: 3 # number of iterations
+iterations: 1 # number of iterations
 
 # Experiment Parameters:
 params:
   exp_name: "local_debug_ppo"
   action_type: "velocity" # either 'velocity' or 'continuous'
+  image_based: True
+  device: 'cuda'
 
   move_board_during_execution: False
 
