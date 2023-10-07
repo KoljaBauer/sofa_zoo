@@ -28,7 +28,7 @@ class PPOIterativeExperiment(experiment.AbstractIterativeExperiment):
 
         image_based = config['params'].get('image_based', False)
         if image_based:
-            observation_type = ObservationType["RGB"]
+            observation_type = ObservationType["RGBD"]
             ppo_kwargs = PPO_KWARGS["image_based"]
         else:
             observation_type = ObservationType["STATE"]
@@ -36,7 +36,7 @@ class PPOIterativeExperiment(experiment.AbstractIterativeExperiment):
 
         env_kwargs = {
             "image_shape": (64, 64),
-            "window_size": (200, 200),
+            "window_size": (64, 64),
             "observation_type": observation_type,
             "time_step": 0.01,
             "frame_skip": 10,
