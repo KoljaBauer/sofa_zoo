@@ -225,6 +225,7 @@ def configure_learning_pipeline(
                 save_freq=max(model_checkpoint_distance // pipeline_config["number_of_envs"], 1),
                 save_path=model_log_dir,
                 name_prefix="rl_model",
+                save_vecnormalize=True
             )
         )
 

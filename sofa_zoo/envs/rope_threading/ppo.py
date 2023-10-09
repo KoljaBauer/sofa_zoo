@@ -22,7 +22,6 @@ class PPOIterativeExperiment(experiment.AbstractIterativeExperiment):
         wandb.init(name=config['params']['exp_name'], sync_tensorboard=True, config=config['params'])
 
         add_render_callback = True
-        continuous_actions = True
         normalize_reward = True
         reward_clip = np.inf
 
@@ -124,6 +123,10 @@ class PPOIterativeExperiment(experiment.AbstractIterativeExperiment):
         device = config['params'].get('device', 'cpu') # either 'cpu' or 'cuda'
         ppo_kwargs['device'] = device
 
+        self.config['checkpoint_distance'] = config['params'].get('save_interval', 1e6)
+        load = config['params'].get('load', False)
+        exp_path = config['params'].get('exp_path', "")
+
         self.model, self.callback = configure_learning_pipeline(
             env_class=RopeThreadingEnv,
             env_kwargs=env_kwargs,
@@ -137,10 +140,18 @@ class PPOIterativeExperiment(experiment.AbstractIterativeExperiment):
             random_seed=seed,
             reward_clip=reward_clip,
             use_wandb=True,
+            model_checkpoint_distance=self.config['checkpoint_distance'],
             use_watchdog_vec_env=True,
-            watchdog_vec_env_timeout=20.0,
+            watchdog_vec_env_timeout=120.0,
             reset_process_on_env_reset=False,
         )
+
+        if load:
+            # TODO: Load VecNormalize Normalization variables
+            env = self.model.env
+            assert exp_path
+            model = PPO.load(path=exp_path, env=env)
+            self.model = model
 
     def iterate(self, cw_config: dict, rep: int, n: int) -> dict:
         self.model.learn(

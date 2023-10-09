@@ -1,13 +1,15 @@
 ---
 # Slurm bwuni cpu
 name: "SLURM"   # MUST BE "SLURM"
-partition: "single"  # "single" for cpu, "gpu_4" or gpu_8" for gpu
+partition: "gpu_8"  # "single" for cpu, "gpu_4" or gpu_8" for gpu
 job-name: "ppo_debugging"# this will be the experiment's name in slurm
 num_parallel_jobs: 99 # max number of jobs executed in parallel
 ntasks: 1   #  leave that like it is
 cpus-per-task: 8   # there are 10 cores for each GPU
 time: 1000   # in minutes
 mem-per-cpu: 2000
+sbatch_args:   # gpus need to be explicitly requested using this
+  gres: "gpu:1" #and this
 
 ---
 # Experiment 1
@@ -20,6 +22,9 @@ iterations: 1 # number of iterations
 
 # Experiment Parameters:
 params:
+  load: False
+  exp_path: '/home/kolja/code/tmp/sofa_zoo/sofa_zoo/envs/rope_threading/wandb/run-20231008_175614-g3ppxo58/files/logs/rl_model_160000_steps.zip'
+  save_interval: 1.0e+4
   exp_name: "local_debug_ppo"
   action_type: "velocity" # either 'velocity' or 'continuous'
   image_based: True
@@ -29,8 +34,8 @@ params:
 
   normalize_obs_static: False
   normalize_obs_dynamic: True
-  total_timesteps: 1.0e+07
-  number_of_envs: 8
+  total_timesteps: 2.5e+07
+  number_of_envs: 16
 
   seed: 1
   learning_rate: 2.5e-5 # initial value, then linear decrease. Default is 2.5e-4
