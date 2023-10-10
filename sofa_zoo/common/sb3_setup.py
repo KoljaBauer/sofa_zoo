@@ -21,6 +21,8 @@ from sofa_zoo.envs.rope_threading.rope_threading_denorm_action_wrapper import Ro
 from sofa_zoo.envs.rope_threading.rope_threading_normalize_obs_wrapper import RopeThreadingNormalizeObsWrapper
 from sofa_zoo.envs.rope_threading.move_board_wrapper import MoveBoardWrapper
 
+from sofa_zoo.envs.rope_threading.rope_threading_stiffness_observation_wrapper import RopeThreadingStiffnessObservationWrapper
+
 from functools import partial
 
 
@@ -37,6 +39,8 @@ def configure_make_env(env_kwargs: dict, EnvClass: Type[SofaEnv], max_episode_st
 
         control_gripper_aperture = env_kwargs.pop("control_gripper_aperture", True)
         normalize_obs_static = env_kwargs.pop("normalize_obs_static", False)
+
+        rope_stiffness = env_kwargs['create_scene_kwargs'].get('rope_stiffness')
 
         if env_kwargs.get("render_mode", None) == RenderMode.HUMAN:
 
@@ -75,6 +79,9 @@ def configure_make_env(env_kwargs: dict, EnvClass: Type[SofaEnv], max_episode_st
 
         if normalize_obs_static:
             env = RopeThreadingNormalizeObsWrapper(env)
+
+        if rope_stiffness['min'] != rope_stiffness['max'] and env.observation_type.name == "STATE":
+            env = RopeThreadingStiffnessObservationWrapper(env)
 
         # TODO observation_type.name is used, because the enum is created in every env -> direct comparison not
         # possible. Is there a cleaner way?
