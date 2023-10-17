@@ -19,6 +19,7 @@ from sofa_zoo.common.reset_process_vec_env import WatchdogVecEnv
 from sofa_zoo.envs.rope_threading.rope_threading_no_gripper_aperture_wrapper import RopeThreadingNoGripperApertureWrapper
 from sofa_zoo.envs.rope_threading.rope_threading_denorm_action_wrapper import RopeThreadingDenormActionWrapper
 from sofa_zoo.envs.rope_threading.rope_threading_normalize_obs_wrapper import RopeThreadingNormalizeObsWrapper
+from sofa_zoo.envs.rope_threading.rope_threading_mask_observation_wrapper import RopeThreadingMaskObsWrapper
 from sofa_zoo.envs.rope_threading.move_board_wrapper import MoveBoardWrapper
 
 from sofa_zoo.envs.rope_threading.rope_threading_stiffness_observation_wrapper import RopeThreadingStiffnessObservationWrapper
@@ -79,6 +80,9 @@ def configure_make_env(env_kwargs: dict, EnvClass: Type[SofaEnv], max_episode_st
 
         if normalize_obs_static:
             env = RopeThreadingNormalizeObsWrapper(env)
+
+        if env.observation_type.name == "STATE":
+            env = RopeThreadingMaskObsWrapper(env)
 
         if rope_stiffness['min'] != rope_stiffness['max'] and env.observation_type.name == "STATE":
             env = RopeThreadingStiffnessObservationWrapper(env)
